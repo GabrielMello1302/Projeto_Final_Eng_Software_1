@@ -1,0 +1,188 @@
+package br.com.techfix.service;
+
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import br.com.techfix.model.Cliente;
+import br.com.techfix.repository.ClienteRepository;
+
+class ClienteServiceTest {
+
+    private ClienteRepository repository;
+    private ClienteService service;
+
+    @BeforeEach
+    void setUp() {
+        repository = new ClienteRepository();
+        service = new ClienteService(repository);
+    }
+
+    @Test
+    void deveCadastrarClienteComSucesso() {
+        Cliente c = new Cliente(
+                0,
+                "Ana",
+                "123.456.789-00",
+                "1199999-0000",
+                "ana@email.com",
+                "Rua A",
+                false
+        );
+
+        Cliente salvo = service.cadastrarCliente(c);
+
+        assertNotNull(salvo);
+        assertEquals(1, salvo.getId(), "ID deve ser gerado automaticamente");
+        assertTrue(salvo.isStatus(), "status inicial deve ser true no cadastro");
+        assertEquals(1, service.listarClientes().size());
+    }
+
+    @Test
+    void naoDeveCadastrarClienteComCpfCnpjDuplicado() {
+        Cliente c1 = new Cliente(
+                0,
+                "Ana",
+                "123.456.789-00",
+                "1199999-0000",
+                "ana@email.com",
+                "Rua A",
+                true
+        );
+
+        Cliente c2 = new Cliente(
+                0,
+                "Bruno",
+                "123.456.789-00",
+                "1188888-0000",
+                "bruno@email.com",
+                "Rua B",
+                true
+        );
+
+        service.cadastrarCliente(c1);
+
+        assertThrows(IllegalArgumentException.class, () -> service.cadastrarCliente(c2));
+        assertEquals(1, service.listarClientes().size());
+    }
+
+    @Test
+    void naoDeveCadastrarClienteComCamposObrigatoriosVazios() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class, () -> service.cadastrarCliente(
+                        new Cliente(0, "", "123.456.789-00", "11", "a@email.com", "Rua A", true)
+                )),
+                () -> assertThrows(IllegalArgumentException.class, () -> service.cadastrarCliente(
+                        new Cliente(0, "Nome", "  ", "11", "a@email.com", "Rua A", true)
+                )),
+                () -> assertThrows(IllegalArgumentException.class, () -> service.cadastrarCliente(
+                        new Cliente(0, "Nome", "123.456.789-00", "11", null, "Rua A", true)
+                ))
+        );
+
+        assertEquals(0, service.listarClientes().size());
+    }
+
+    @Test
+    void deveAtualizarClienteComSucesso() {
+        Cliente criado = service.cadastrarCliente(new Cliente(
+                0,
+                "Ana",
+                "123.456.789-00",
+                "1199999-0000",
+                "ana@email.com",
+                "Rua A",
+                true
+        ));
+
+        Cliente atualizado = new Cliente(
+                criado.getId(),
+                "Ana Paula",
+                "123.456.789-00",
+                "1200000-0000",
+                "ana.paula@email.com",
+                "Rua B",
+                true
+        );
+
+        Cliente salvo = service.atualizarCliente(atualizado);
+
+        assertEquals(criado.getId(), salvo.getId());
+        assertEquals("Ana Paula", salvo.getNome());
+        assertEquals("ana.paula@email.com", salvo.getEmail());
+        assertEquals(1, service.listarClientes().size());
+    }
+
+    @Test
+    void naoDeveAtualizarClienteComCpfDuplicadoDeOutroCliente() {
+        Cliente c1 = service.cadastrarCliente(new Cliente(
+                0,
+                "Ana",
+                "111.111.111-11",
+                "11",
+                "ana@email.com",
+                "Rua A",
+                true
+        ));
+
+        Cliente c2 = service.cadastrarCliente(new Cliente(
+                0,
+                "Bruno",
+                "222.222.222-22",
+                "22",
+                "bruno@email.com",
+                "Rua B",
+                true
+        ));
+
+        Cliente atualizar = new Cliente(
+                c2.getId(),
+                "Bruno",
+                "111.111.111-11", // CPF/CNPJ de outro cliente
+                "22",
+                "novo@email.com",
+                "Rua C",
+                true
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> service.atualizarCliente(atualizar));
+
+        // Garante que ainda existem 2 ativos
+        assertEquals(2, service.listarClientes().size());
+    }
+
+    @Test
+    void deveRealizarExclusaoLogicaComSucesso() {
+        Cliente c = service.cadastrarCliente(new Cliente(
+                0,
+                "Ana",
+                "123.456.789-00",
+                "11",
+                "ana@email.com",
+                "Rua A",
+                true
+        ));
+
+        assertEquals(1, service.listarClientes().size());
+
+        service.excluirCliente(c.getId());
+
+        assertEquals(0, service.listarClientes().size(), "Cliente excluído logicamente deve sair da listagem de ativos");
+        assertFalse(service.buscarPorId(c.getId()).isStatus(), "status deve ser false após exclusão lógica");
+    }
+
+    @Test
+    void deveLancarExcecaoAoBuscarOuExcluirIdInexistente() {
+        int inexistente = 999;
+
+        assertThrows(IllegalArgumentException.class, () -> service.buscarPorId(inexistente));
+        assertThrows(IllegalArgumentException.class, () -> service.excluirCliente(inexistente));
+    }
+}
+
+
