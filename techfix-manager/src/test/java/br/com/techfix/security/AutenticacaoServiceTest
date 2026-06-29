@@ -1,0 +1,96 @@
+package br.com.techfix.security;
+
+import br.com.techfix.model.Funcionario;
+import br.com.techfix.model.Perfil;
+import br.com.techfix.repository.FuncionarioRepository;
+import br.com.techfix.service.AutenticacaoService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class AutenticacaoServiceTest {
+
+    private FuncionarioRepository repository;
+    private AutenticacaoService service;
+
+    private Funcionario gerente;
+    private Funcionario tecnico;
+    private Funcionario inativo;
+
+    @BeforeEach
+    void setUp() {
+        repository = new FuncionarioRepository();
+        service = new AutenticacaoService(repository);
+
+        gerente = new Funcionario(
+                0,
+                "Gerente",
+                "gerente@techfix.com",
+                "admin123",
+                true,
+                Perfil.GERENTE,
+                "M-G1",
+                "11111-1111",
+                "Rua Gerente"
+        );
+
+        tecnico = new Funcionario(
+                0,
+                "Tecnico",
+                "tecnico@techfix.com",
+                "tech123",
+                true,
+                Perfil.TECNICO,
+                "M-T1",
+                "22222-2222",
+                "Rua Tecnico"
+        );
+
+        inativo = new Funcionario(
+                0,
+                "Inativo",
+                "inativo@techfix.com",
+                "inativo123",
+                false,
+                Perfil.ATENDENTE,
+                "M-I1",
+                "33333-3333",
+                "Rua Inativo"
+        );
+
+        repository.salvar(gerente);
+        repository.salvar(tecnico);
+        repository.salvar(inativo);
+    }
+
+    @Test
+    void deveAutenticarComSucesso() {
+        Funcionario logadoGerente = service.login("gerente@techfix.com", "admin123");
+        assertNotNull(logadoGerente);
+        assertEquals(Perfil.GERENTE, logadoGerente.getPerfil());
+
+        Funcionario logadoTecnico = service.login("tecnico@techfix.com", "tech123");
+        assertNotNull(logadoTecnico);
+        assertEquals(Perfil.TECNICO, logadoTecnico.getPerfil());
+    }
+
+    @Test
+    void naoDeveAutenticarComSenhaIncorreta() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.login("gerente@techfix.com", "senhaErrada"));
+    }
+
+    @Test
+    void naoDeveAutenticarComEmailInexistente() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.login("email-inexistente@techfix.com", "qualquer"));
+    }
+
+    @Test
+    void naoDeveAutenticarFuncionarioInativo() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.login("inativo@techfix.com", "inativo123"));
+    }
+}
+
