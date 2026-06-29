@@ -1,0 +1,233 @@
+package br.com.techfix.view;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.Scanner;
+
+import br.com.techfix.model.Cliente;
+import br.com.techfix.model.Funcionario;
+import br.com.techfix.model.OrdemServico;
+import br.com.techfix.model.Perfil;
+import br.com.techfix.model.StatusOS;
+import br.com.techfix.repository.ClienteRepository;
+import br.com.techfix.repository.FuncionarioRepository;
+import br.com.techfix.repository.OrdemServicoRepository;
+import br.com.techfix.service.AutenticacaoService;
+import br.com.techfix.service.ClienteService;
+import br.com.techfix.service.FuncionarioService;
+import br.com.techfix.service.OrdemServicoService;
+
+public class MainApplication {
+
+    public static void main(String[] args) {
+        // Repositórios em memória
+        FuncionarioRepository funcionarioRepository = new FuncionarioRepository();
+        ClienteRepository clienteRepository = new ClienteRepository();
+        OrdemServicoRepository ordemServicoRepository = new OrdemServicoRepository();
+
+        // Serviços
+        FuncionarioService funcionarioService = new FuncionarioService(funcionarioRepository);
+        ClienteService clienteService = new ClienteService(clienteRepository);
+        OrdemServicoService ordemServicoService = new OrdemServicoService(ordemServicoRepository);
+        AutenticacaoService autenticacaoService = new AutenticacaoService(funcionarioRepository);
+
+        // Dados iniciais
+        funcionarioService.cadastrarFuncionario(new Funcionario(
+                0,
+                "Gerente Padrão",
+                "gerente@techfix.com",
+                "admin123",
+                true,
+                Perfil.GERENTE,
+                "M-GER-1",
+                "1199999-0000",
+                "Rua do Gerente"
+        ));
+
+        Scanner scanner = new Scanner(System.in);
+        Funcionario session = null;
+
+        while (true) {
+            try {
+                if (session == null) {
+                    System.out.println("=== TechFix Manager ===");
+                    System.out.print("E-mail: ");
+                    String email = scanner.nextLine();
+                    System.out.print("Senha: ");
+                    String senha = scanner.nextLine();
+
+                    session = autenticacaoService.login(email, senha);
+                    System.out.println("Login OK. Perfil: " + session.getPerfil());
+                }
+
+                // Menus por perfil
+                if (session.getPerfil() == Perfil.GERENTE) {
+                    session = menuGerente(scanner, session, funcionarioService);
+                } else if (session.getPerfil() == Perfil.ATENDENTE) {
+                    session = menuAtendente(scanner, session, clienteService, ordemServicoService);
+                } else if (session.getPerfil() == Perfil.TECNICO) {
+                    session = menuTecnico(scanner, session, ordemServicoService, ordemServicoRepository);
+                } else {
+                    System.out.println("Perfil sem menu implementado.");
+                    session = null;
+                }
+
+            } catch (IllegalArgumentException ex) {
+                System.out.println("Erro: " + ex.getMessage());
+                // mantém session caso login/operacao falhe após logado
+            }
+        }
+    }
+
+    private static Funcionario menuGerente(Scanner scanner, Funcionario session, FuncionarioService funcionarioService) {
+        while (true) {
+            System.out.println("\n--- Menu GERENTE ---");
+            System.out.println("1) Cadastrar Funcionário");
+            System.out.println("2) Listar Funcionários");
+            System.out.println("3) Excluir Funcionário");
+            System.out.println("0) Logout");
+            System.out.print("Escolha: ");
+
+            String op = scanner.nextLine();
+            switch (op) {
+                case "1" -> {
+                    Funcionario f = lerFuncionario(scanner);
+                    funcionarioService.cadastrarFuncionario(f);
+                    System.out.println("Funcionário cadastrado.");
+                }
+                case "2" -> {
+                    List<Funcionario> funcionarios = funcionarioService.listarFuncionarios();
+                    funcionarios.forEach(fn -> System.out.println(fn.getId() + ": " + fn.getNome() + " (" + fn.getPerfil() + ")"));
+                }
+                case "3" -> {
+                    System.out.print("ID do funcionário para excluir: ");
+                    int id = Integer.parseInt(scanner.nextLine());
+                    funcionarioService.excluirFuncionario(id);
+                    System.out.println("Exclusão lógica efetuada.");
+                }
+                case "0" -> {
+                    return null;
+                }
+                default -> System.out.println("Opção inválida.");
+            }
+        }
+    }
+
+    private static Funcionario menuAtendente(Scanner scanner, Funcionario session, ClienteService clienteService,
+                                             OrdemServicoService ordemServicoService) {
+        while (true) {
+            System.out.println("\n--- Menu ATENDENTE ---");
+            System.out.println("1) Cadastrar Cliente");
+            System.out.println("2) Listar Clientes");
+            System.out.println("3) Criar Ordem de Serviço");
+            System.out.println("0) Logout");
+            System.out.print("Escolha: ");
+
+            String op = scanner.nextLine();
+            switch (op) {
+                case "1" -> {
+                    Cliente c = lerCliente(scanner);
+                    clienteService.cadastrarCliente(c);
+                    System.out.println("Cliente cadastrado.");
+                }
+                case "2" -> {
+                    List<Cliente> clientes = clienteService.listarClientes();
+                    clientes.forEach(c -> System.out.println(c.getId() + ": " + c.getNome() + " (" + c.getCpfCnpj() + ")"));
+                }
+                case "3" -> {
+                    System.out.print("ID do Cliente: ");
+                    int idCliente = Integer.parseInt(scanner.nextLine());
+                    Cliente cliente = clienteService.buscarPorId(idCliente);
+
+                    System.out.print("Descrição: ");
+                    String descricao = scanner.nextLine();
+                    System.out.print("Prioridade: ");
+                    String prioridade = scanner.nextLine();
+
+                    OrdemServico os = ordemServicoService.criarOS(cliente, descricao, prioridade);
+                    System.out.println("OS criada: " + os.getNumeroOS());
+                }
+                case "0" -> {
+                    return null;
+                }
+                default -> System.out.println("Opção inválida.");
+            }
+        }
+    }
+
+    private static Funcionario menuTecnico(Scanner scanner, Funcionario session, OrdemServicoService ordemServicoService,
+                                           OrdemServicoRepository ordemServicoRepository) {
+        while (true) {
+            System.out.println("\n--- Menu TECNICO ---");
+            System.out.println("1) Visualizar OS");
+            System.out.println("2) Emitir Orçamento");
+            System.out.println("3) Finalizar OS");
+            System.out.println("0) Logout");
+            System.out.print("Escolha: ");
+
+            String op = scanner.nextLine();
+            switch (op) {
+                case "1" -> {
+                    List<OrdemServico> ordens = ordemServicoRepository.listarTodas();
+                    ordens.forEach(os -> System.out.println(os.getId() + ": " + os.getNumeroOS() + " - " + os.getStatus()));
+                }
+                case "2" -> {
+                    System.out.print("ID da OS: ");
+                    int idOS = Integer.parseInt(scanner.nextLine());
+                    System.out.print("Valor do orçamento: ");
+                    double valor = Double.parseDouble(scanner.nextLine());
+
+                    OrdemServico os = ordemServicoService.emitirOrcamento(idOS, valor);
+                    System.out.println("Orçamento atualizado. Valor=" + os.getOrcamento());
+                }
+                case "3" -> {
+                    System.out.print("ID da OS: ");
+                    int idOS = Integer.parseInt(scanner.nextLine());
+
+                    OrdemServico os = ordemServicoService.finalizarOS(idOS);
+                    System.out.println("OS finalizada. Data fechamento=" + os.getDataFechamento());
+                }
+                case "0" -> {
+                    return null;
+                }
+                default -> System.out.println("Opção inválida.");
+            }
+        }
+    }
+
+    private static Funcionario lerFuncionario(Scanner scanner) {
+        System.out.print("Nome: ");
+        String nome = scanner.nextLine();
+        System.out.print("E-mail: ");
+        String email = scanner.nextLine();
+        System.out.print("Senha: ");
+        String senha = scanner.nextLine();
+        System.out.print("Perfil (GERENTE/ATENDENTE/TECNICO/CLIENTE): ");
+        Perfil perfil = Perfil.valueOf(scanner.nextLine().trim().toUpperCase());
+
+        System.out.print("Matricula: ");
+        String matricula = scanner.nextLine();
+        System.out.print("Telefone: ");
+        String telefone = scanner.nextLine();
+        System.out.print("Endereço: ");
+        String endereco = scanner.nextLine();
+
+        return new Funcionario(0, nome, email, senha, true, perfil, matricula, telefone, endereco);
+    }
+
+    private static Cliente lerCliente(Scanner scanner) {
+        System.out.print("Nome: ");
+        String nome = scanner.nextLine();
+        System.out.print("CPF/CNPJ: ");
+        String cpfCnpj = scanner.nextLine();
+        System.out.print("Telefone: ");
+        String telefone = scanner.nextLine();
+        System.out.print("E-mail: ");
+        String email = scanner.nextLine();
+        System.out.print("Endereço: ");
+        String endereco = scanner.nextLine();
+
+        return new Cliente(0, nome, cpfCnpj, telefone, email, endereco, true);
+    }
+}
+
