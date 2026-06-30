@@ -1,0 +1,14 @@
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\model\Cliente.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\model\Funcionario.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\model\OrdemServico.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\model\Perfil.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\model\StatusOS.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\model\Usuario.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\repository\ClienteRepository.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\repository\FuncionarioRepository.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\repository\OrdemServicoRepository.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\service\AutenticacaoService.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\service\ClienteService.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\service\FuncionarioService.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\service\OrdemServicoService.java
+C:\Users\deny\Documents\Engenharia_Software\techfix-manager\src\main\java\br\com\techfix\view\MainApplication.java
